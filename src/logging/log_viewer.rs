@@ -8,7 +8,7 @@ use super::{
 };
 
 #[derive(Debug)]
-struct LogEntry {
+pub struct LogEntry {
     level: LogLevel,
     msg: String,
     sender: &'static str,
@@ -183,4 +183,68 @@ pub fn warn(sender: &'static str, message: impl Into<String>) -> Result<(), ()> 
 
 pub fn error(sender: &'static str, message: impl Into<String>) -> Result<(), ()> {
     send(LogLevel::Err, sender, message)
+}
+
+#[macro_export]
+macro_rules! send {
+    ($level: expr, $sender: expr) => {
+        let _ = $crate::logging::send($level, $sender, "");
+    };
+    ($level: expr, $sender: expr, $message: expr) => {
+        let _ = $crate::logging::send($level, $sender, $message);
+    };
+    ($level: expr, $sender: expr, $($arg:expr),+) => {
+        let _ = $crate::logging::send($level, $sender, format!($($arg),+));
+    };
+    ($level: expr, $sender: expr, $($arg:expr,)+) => {
+        let _ = $crate::logging::send($level, $sender, format!($($arg),+));
+    };
+}
+
+#[macro_export]
+macro_rules! info {
+    ($sender: expr) => {
+        let _ = $crate::logging::info($sender, "");
+    };
+    ($sender: expr, $message: expr) => {
+        let _ = $crate::logging::info($sender, $message);
+    };
+    ($sender: expr, $($arg:expr),+) => {
+        let _ = $crate::logging::info($sender, format!($($arg),+));
+    };
+    ($sender: expr, $($arg:expr,)+) => {
+        let _ = $crate::logging::info($sender, format!($($arg),+));
+    };
+}
+
+#[macro_export]
+macro_rules! warn {
+    ($sender: expr) => {
+        let _ = $crate::logging::warn($sender, "");
+    };
+    ($sender: expr, $message: expr) => {
+        let _ = $crate::logging::warn($sender, $message);
+    };
+    ($sender: expr, $($arg:expr),+) => {
+        let _ = $crate::logging::warn($sender, format!($($arg),+));
+    };
+    ($sender: expr, $($arg:expr,)+) => {
+        let _ = $crate::logging::warn($sender, format!($($arg),+));
+    };
+}
+
+#[macro_export]
+macro_rules! error {
+    ($sender: expr) => {
+        let _ = $crate::logging::error($sender, "");
+    };
+    ($sender: expr, $message: expr) => {
+        let _ = $crate::logging::error($sender, $message);
+    };
+    ($sender: expr, $($arg:expr),+) => {
+        let _ = $crate::logging::error($sender, format!($($arg),+));
+    };
+    ($sender: expr, $($arg:expr,)+) => {
+        let _ = $crate::logging::error($sender, format!($($arg),+));
+    };
 }

@@ -1,6 +1,6 @@
 use anathema::component::*;
 
-use crate::logging::{LogLevel, Logger};
+use crate::{logging::LogLevel, send};
 
 pub struct MyComponent {
     pub name: &'static str,
@@ -34,7 +34,7 @@ impl Component for MyComponent {
         });
         if should_change {
             state.is_selected.set(!state.is_selected.to_bool());
-            let _ = Logger.send(self.log_level, self.name, format!("Set State to {}", state.is_selected.to_bool()));
+            send!(self.log_level, self.name, "Set State to {}", state.is_selected.to_bool());
         }
     }
 }
