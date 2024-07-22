@@ -1,6 +1,5 @@
-workspace = { members = ["example"] }
 [package]
-name = "anathema-logging"
+name = "example"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 anathema = { git = "https://github.com/togglebyte/anathema/", branch = "dev" }
+anathema-logging = { path = "../" }

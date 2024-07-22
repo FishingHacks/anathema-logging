@@ -60,6 +60,13 @@ version = "0.3.0"
 source = "git+https://github.com/togglebyte/anathema/?branch=dev#4329d5bc2cce6e2190524082a447ea828f98f737"
 
 [[package]]
+name = "anathema-logging"
+version = "0.1.0"
+dependencies = [
+ "anathema",
+]
+
+[[package]]
 name = "anathema-runtime"
 version = "0.3.0"
 source = "git+https://github.com/togglebyte/anathema/?branch=dev#4329d5bc2cce6e2190524082a447ea828f98f737"
@@ -113,13 +120,6 @@ dependencies = [
  "anathema-debug",
  "anathema-state",
  "anathema-store",
-]
-
-[[package]]
-name = "anathema-test"
-version = "0.1.0"
-dependencies = [
- "anathema",
 ]
 
 [[package]]
@@ -215,6 +215,14 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "example"
+version = "0.1.0"
+dependencies = [
+ "anathema",
+ "anathema-logging",
 ]
 
 [[package]]

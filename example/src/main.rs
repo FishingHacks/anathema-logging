@@ -1,8 +1,7 @@
 use anathema::prelude::*;
-use logging::{register_logger, LogLevel};
+use anathema_logging::{register_logger, LogLevel};
 use test_component::{MyComponent, MyState};
 
-pub(crate) mod logging;
 pub(crate) mod test_component;
 
 static TEMPLATE: &str = include_str!("./template.aml");
@@ -22,12 +21,14 @@ fn main() {
 
     register_logger(&mut runtime_builder).expect("Failed to register the logger");
 
-
     runtime_builder
         .register_prototype(
             "my-comp-1",
             "src/example_widget.aml",
-            || MyComponent { log_level: LogLevel::Info, name: "my-comp-1" },
+            || MyComponent {
+                log_level: LogLevel::Info,
+                name: "my-comp-1",
+            },
             MyState::default,
         )
         .expect("Failed to register `my-comp-1` component");
@@ -36,7 +37,10 @@ fn main() {
         .register_prototype(
             "my-comp-2",
             "src/example_widget.aml",
-            || MyComponent { log_level: LogLevel::Warn, name: "my-comp-2" },
+            || MyComponent {
+                log_level: LogLevel::Warn,
+                name: "my-comp-2",
+            },
             MyState::default,
         )
         .expect("Failed to register `my-comp-2` component");
@@ -45,7 +49,10 @@ fn main() {
         .register_prototype(
             "my-comp-3",
             "src/example_widget.aml",
-            || MyComponent { log_level: LogLevel::Err, name: "my-comp-3" },
+            || MyComponent {
+                log_level: LogLevel::Err,
+                name: "my-comp-3",
+            },
             MyState::default,
         )
         .expect("Failed to register `my-comp-3` component");

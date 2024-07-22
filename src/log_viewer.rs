@@ -1,6 +1,10 @@
-use std::cell::OnceCell;
+use std::{cell::OnceCell, fmt::Debug};
 
-use anathema::{component::*, geometry::Pos, runtime::RuntimeBuilder};
+use anathema::{
+    component::*,
+    geometry::Pos,
+    runtime::RuntimeBuilder,
+};
 
 use super::{
     log_state::{LogFilter, LogViewerState, StateLogEntry},
@@ -103,26 +107,73 @@ impl Component for LogViewer {
     }
 }
 
+enum Either<TA, TB> {
+    A(TA),
+    B(TB),
+}
+
 thread_local! {
-    static LOGGER: OnceCell<(ComponentId<LogEntry>, Emitter)> = OnceCell::new();
+    static LOGGER: OnceCell<(Either<ComponentId<LogEntry>, ComponentId<String>>, Emitter)> = OnceCell::new();
 }
 
-pub fn register_logger<T>(builder: &mut RuntimeBuilder<T>) -> anathema::runtime::Result<()> {
-    let component_id = builder.register_component(
-        "log-viewer",
-        "src/log_viewer.aml",
-        LogViewer,
-        LogViewerState::default(),
-    )?;
-    register_custom_logger(component_id, builder);
-    Ok(())
+pub enum LoggerRegistrationError {
+    Anathema(anathema::runtime::Result<()>),
+    DoubleRegistrationError,
 }
 
+impl Debug for LoggerRegistrationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Anathema(Err(err)) => Debug::fmt(err, f),
+            Self::DoubleRegistrationError => f.write_str("A logger was already registered!"),
+            _ => unreachable!(),
+        }
+    }
+}
+
+/// Will error if a logger was already registered or anathema failed to register the component
+pub fn register_logger<T>(builder: &mut RuntimeBuilder<T>) -> Result<(), LoggerRegistrationError> {
+    register_logger_with_custom_name(builder, "log-viewer")
+}
+
+/// Will error if a logger was already registered or anathema failed to register the component
+pub fn register_logger_with_custom_name<T>(
+    builder: &mut RuntimeBuilder<T>,
+    name: &str,
+) -> Result<(), LoggerRegistrationError> {
+    let component_id = builder
+        .register_component(
+            name,
+            "src/log_viewer.aml",
+            LogViewer,
+            LogViewerState::default(),
+        )
+        .map_err(|e| LoggerRegistrationError::Anathema(anathema::runtime::Result::Err(e)))?;
+    register_custom_logger(component_id, builder)
+}
+
+/// Will error if a logger was already registered
 pub fn register_custom_logger<T>(
     component_id: ComponentId<LogEntry>,
     builder: &mut RuntimeBuilder<T>,
-) {
-    LOGGER.with(|logger| logger.set((component_id, builder.emitter())));
+) -> Result<(), LoggerRegistrationError> {
+    LOGGER.with(|logger| {
+        logger
+            .set((Either::A(component_id), builder.emitter()))
+            .map_err(|_| LoggerRegistrationError::DoubleRegistrationError)
+    })
+}
+
+/// Will error if a logger was already registered
+pub fn register_custom_logger_simple<T>(
+    component_id: ComponentId<String>,
+    builder: &mut RuntimeBuilder<T>,
+) -> Result<(), LoggerRegistrationError> {
+    LOGGER.with(|logger| {
+        logger
+            .set((Either::B(component_id), builder.emitter()))
+            .map_err(|_| LoggerRegistrationError::DoubleRegistrationError)
+    })
 }
 
 pub struct Logger;
@@ -150,25 +201,29 @@ impl Logger {
     }
 }
 
-pub fn send(
-    level: LogLevel,
-    sender: &'static str,
-    message: impl Into<String>,
-) -> Result<(), ()> {
+pub fn send(level: LogLevel, sender: &'static str, message: impl Into<String>) -> Result<(), ()> {
     LOGGER.with(|logger| {
         if let Some((component, emitter)) = logger.get() {
-            emitter
-                .emit(
-                    *component,
-                    LogEntry {
-                        level,
-                        msg: message.into(),
-                        sender,
-                    },
-                )
-                .map_err(|_| ())
+            match component {
+                Either::A(component_id) => emitter
+                    .emit(
+                        *component_id,
+                        LogEntry {
+                            level,
+                            msg: message.into(),
+                            sender,
+                        },
+                    )
+                    .map_err(|_| ()),
+                Either::B(component_id) => emitter
+                    .emit(
+                        *component_id,
+                        format!("[{level:?}] {sender}: {}", message.into()),
+                    )
+                    .map_err(|_| ()),
+            }
         } else {
-            Err(())
+            Ok(())
         }
     })
 }
@@ -188,63 +243,63 @@ pub fn error(sender: &'static str, message: impl Into<String>) -> Result<(), ()>
 #[macro_export]
 macro_rules! send {
     ($level: expr, $sender: expr) => {
-        let _ = $crate::logging::send($level, $sender, "");
+        let _ = $crate::send($level, $sender, "");
     };
     ($level: expr, $sender: expr, $message: expr) => {
-        let _ = $crate::logging::send($level, $sender, $message);
+        let _ = $crate::send($level, $sender, $message);
     };
     ($level: expr, $sender: expr, $($arg:expr),+) => {
-        let _ = $crate::logging::send($level, $sender, format!($($arg),+));
+        let _ = $crate::send($level, $sender, format!($($arg),+));
     };
     ($level: expr, $sender: expr, $($arg:expr,)+) => {
-        let _ = $crate::logging::send($level, $sender, format!($($arg),+));
+        let _ = $crate::send($level, $sender, format!($($arg),+));
     };
 }
 
 #[macro_export]
 macro_rules! info {
     ($sender: expr) => {
-        let _ = $crate::logging::info($sender, "");
+        let _ = $crate::info($sender, "");
     };
     ($sender: expr, $message: expr) => {
-        let _ = $crate::logging::info($sender, $message);
+        let _ = $crate::info($sender, $message);
     };
     ($sender: expr, $($arg:expr),+) => {
-        let _ = $crate::logging::info($sender, format!($($arg),+));
+        let _ = $crate::info($sender, format!($($arg),+));
     };
     ($sender: expr, $($arg:expr,)+) => {
-        let _ = $crate::logging::info($sender, format!($($arg),+));
+        let _ = $crate::info($sender, format!($($arg),+));
     };
 }
 
 #[macro_export]
 macro_rules! warn {
     ($sender: expr) => {
-        let _ = $crate::logging::warn($sender, "");
+        let _ = $crate::warn($sender, "");
     };
     ($sender: expr, $message: expr) => {
-        let _ = $crate::logging::warn($sender, $message);
+        let _ = $crate::warn($sender, $message);
     };
     ($sender: expr, $($arg:expr),+) => {
-        let _ = $crate::logging::warn($sender, format!($($arg),+));
+        let _ = $crate::warn($sender, format!($($arg),+));
     };
     ($sender: expr, $($arg:expr,)+) => {
-        let _ = $crate::logging::warn($sender, format!($($arg),+));
+        let _ = $crate::warn($sender, format!($($arg),+));
     };
 }
 
 #[macro_export]
 macro_rules! error {
     ($sender: expr) => {
-        let _ = $crate::logging::error($sender, "");
+        let _ = $crate::error($sender, "");
     };
     ($sender: expr, $message: expr) => {
-        let _ = $crate::logging::error($sender, $message);
+        let _ = $crate::error($sender, $message);
     };
     ($sender: expr, $($arg:expr),+) => {
-        let _ = $crate::logging::error($sender, format!($($arg),+));
+        let _ = $crate::error($sender, format!($($arg),+));
     };
     ($sender: expr, $($arg:expr,)+) => {
-        let _ = $crate::logging::error($sender, format!($($arg),+));
+        let _ = $crate::error($sender, format!($($arg),+));
     };
 }

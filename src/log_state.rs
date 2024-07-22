@@ -97,7 +97,7 @@ impl State for LogFilterState {
     }
 }
 
-#[derive(State, Debug)]
+#[derive(State)]
 pub struct StateLogEntry {
     pub level: Value<LogLevel>,
     pub msg: Value<String>,
