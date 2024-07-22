@@ -1,9 +1,8 @@
 use anathema::component::*;
 
-use crate::{get_logger, logging::{LogLevel, Logger}};
+use crate::logging::{LogLevel, Logger};
 
 pub struct MyComponent {
-    pub logger: Option<Logger>,
     pub name: &'static str,
     pub log_level: LogLevel,
 }
@@ -22,7 +21,7 @@ impl Component for MyComponent {
         mouse: MouseEvent,
         state: &mut Self::State,
         mut elements: Elements<'_, '_>,
-        context: anathema::prelude::Context<'_>,
+        _context: anathema::prelude::Context<'_>,
     ) {
         if !mouse.lsb_up() {
             return;
@@ -35,15 +34,7 @@ impl Component for MyComponent {
         });
         if should_change {
             state.is_selected.set(!state.is_selected.to_bool());
-            let logger = match self.logger {
-                None => {
-                    self.logger = Some(get_logger());
-                    self.logger.as_ref().unwrap()
-                },
-                Some(ref v) => v,
-            };
-
-            let _ = logger.send(self.log_level, self.name, format!("Set State to {}", state.is_selected.to_bool()));
+            let _ = Logger.send(self.log_level, self.name, format!("Set State to {}", state.is_selected.to_bool()));
         }
     }
 }

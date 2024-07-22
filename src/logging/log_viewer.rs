@@ -1,3 +1,5 @@
+use std::cell::OnceCell;
+
 use anathema::{component::*, geometry::Pos, runtime::RuntimeBuilder};
 
 use super::{
@@ -101,24 +103,29 @@ impl Component for LogViewer {
     }
 }
 
-pub fn register_logger<T>(builder: &mut RuntimeBuilder<T>) -> anathema::runtime::Result<Logger> {
-    let component = builder.register_component(
+thread_local! {
+    static LOGGER: OnceCell<(ComponentId<LogEntry>, Emitter)> = OnceCell::new();
+}
+
+pub fn register_logger<T>(builder: &mut RuntimeBuilder<T>) -> anathema::runtime::Result<()> {
+    let component_id = builder.register_component(
         "log-viewer",
         "src/log_viewer.aml",
         LogViewer,
         LogViewerState::default(),
     )?;
-    Ok(Logger {
-        component,
-        emitter: builder.emitter(),
-    })
+    register_custom_logger(component_id, builder);
+    Ok(())
 }
 
-#[derive(Clone)]
-pub struct Logger {
-    emitter: Emitter,
-    component: ComponentId<LogEntry>,
+pub fn register_custom_logger<T>(
+    component_id: ComponentId<LogEntry>,
+    builder: &mut RuntimeBuilder<T>,
+) {
+    LOGGER.with(|logger| logger.set((component_id, builder.emitter())));
 }
+
+pub struct Logger;
 
 impl Logger {
     pub fn send(
@@ -127,27 +134,53 @@ impl Logger {
         sender: &'static str,
         message: impl Into<String>,
     ) -> Result<(), ()> {
-        self.emitter
-            .emit(
-                self.component,
-                LogEntry {
-                    level,
-                    msg: message.into(),
-                    sender,
-                },
-            )
-            .map_err(|_| ())
+        send(level, sender, message)
     }
 
     pub fn info(&self, sender: &'static str, message: impl Into<String>) -> Result<(), ()> {
-        self.send(LogLevel::Info, sender, message)
+        info(sender, message)
     }
 
     pub fn warn(&self, sender: &'static str, message: impl Into<String>) -> Result<(), ()> {
-        self.send(LogLevel::Warn, sender, message)
+        warn(sender, message)
     }
 
     pub fn error(&self, sender: &'static str, message: impl Into<String>) -> Result<(), ()> {
-        self.send(LogLevel::Err, sender, message)
+        error(sender, message)
     }
+}
+
+pub fn send(
+    level: LogLevel,
+    sender: &'static str,
+    message: impl Into<String>,
+) -> Result<(), ()> {
+    LOGGER.with(|logger| {
+        if let Some((component, emitter)) = logger.get() {
+            emitter
+                .emit(
+                    *component,
+                    LogEntry {
+                        level,
+                        msg: message.into(),
+                        sender,
+                    },
+                )
+                .map_err(|_| ())
+        } else {
+            Err(())
+        }
+    })
+}
+
+pub fn info(sender: &'static str, message: impl Into<String>) -> Result<(), ()> {
+    send(LogLevel::Info, sender, message)
+}
+
+pub fn warn(sender: &'static str, message: impl Into<String>) -> Result<(), ()> {
+    send(LogLevel::Warn, sender, message)
+}
+
+pub fn error(sender: &'static str, message: impl Into<String>) -> Result<(), ()> {
+    send(LogLevel::Err, sender, message)
 }
