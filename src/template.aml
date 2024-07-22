@@ -1,0 +1,12 @@
+vstack
+    @my-comp-1
+        $children
+            text "Component 1"
+    @my-comp-2
+        $children
+            text "Component 2"
+    @my-comp-3
+        $children
+            text "Component 3"
+    spacer
+    @log-viewer

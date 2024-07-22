@@ -1,0 +1,6 @@
+if is_selected
+    border [border-style: "thick"]
+        $children
+else
+    border
+        $children

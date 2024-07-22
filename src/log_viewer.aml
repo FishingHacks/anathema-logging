@@ -1,0 +1,61 @@
+if is_open
+    zstack
+        position [left: 1]
+            if is_open
+                hstack
+                    text "{"
+                    text [foreground: "white", background: "red", bold: true, click_action: "close"] " X "
+                    text "} "
+                    text [bold: true, foreground: "yellow"] "Log Viewer"
+        border
+            container [min-width: 19]
+                vstack
+                    text " Click the "
+                        span [bold: true] "[log level]"
+                        span " to set the filter. "
+                    text " Click the log entry to copy it. "
+                    text " "
+                    if length < 1
+                        text [italic: true, foreground: "gray"] " No log entries! "
+                    else
+                        if filter == "level"
+                            text [click_action: "filter-reset"] "Filter: "
+                                span [bold: true] "[" filter.value "]"
+                                span ". "
+                                span [bold: true, foreground: "green"] "Clear"
+                        else if filter == "sender"
+                            text [click_action: "filter-reset"] "Filter: From "
+                                span [bold: true] filter.value
+                        for log in log_entries
+                            if filter == "none"
+                                hstack
+                                    text " "
+                                    if log.level == "WARN"
+                                        text [bold: true, foreground: "yellow", click_action: "filter-level-set-warn", level: log.level] "[" log.level "]"
+                                    else if log.level == "ERR"
+                                        text [bold: true, foreground: "red", click_action: "filter-level-set-err", level: log.level] "[" log.level "]"
+                                    else
+                                        text [bold: true, click_action: "filter-level-set-info"] "[" log.level "]"
+                                    text " "
+                                    text log.sender
+                                    text ": "
+                                    text log.msg
+                                    text " "
+                            else if filter == "level" && log.level == filter.value
+                                hstack
+                                    text " "
+                                    if log.level == "WARN"
+                                        text [bold: true, foreground: "yellow", click_action: "filter-level-set-warn", level: log.level] "[" log.level "]"
+                                    else if log.level == "ERR"
+                                        text [bold: true, foreground: "red", click_action: "filter-level-set-err", level: log.level] "[" log.level "]"
+                                    else
+                                        text [bold: true, click_action: "filter-level-set-info"] "[" log.level "]"
+                                    text " "
+                                    text log.sender
+                                    text ": "
+                                    text log.msg
+                                    text " "
+else
+    text [click_action: "open_log"] ""
+        span [foreground: "yellow", bold: true] "Open Log Viewer "
+        span "(" length ")"
