@@ -1,6 +1,6 @@
 if is_selected
     border [border-style: "thick"]
-        $children
+        text "a"
 else
     border
-        $children
+        text "b"

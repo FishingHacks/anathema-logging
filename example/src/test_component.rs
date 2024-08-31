@@ -21,12 +21,12 @@ impl Component for MyComponent {
         mouse: MouseEvent,
         state: &mut Self::State,
         mut elements: Elements<'_, '_>,
-        _context: anathema::prelude::Context<'_>,
+        _context: anathema::prelude::Context<'_, Self::State>,
     ) {
         if !mouse.lsb_up() {
             return;
         }
-        let query = elements.query().at_position(mouse.pos());
+        let query = elements.at_position(mouse.pos());
 
         let mut should_change = false;
         query.first(|_, _| {

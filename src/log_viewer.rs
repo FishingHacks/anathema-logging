@@ -1,9 +1,7 @@
 use std::{cell::OnceCell, fmt::Debug};
 
 use anathema::{
-    component::*,
-    geometry::Pos,
-    runtime::RuntimeBuilder,
+    component::*, geometry::Pos, prelude::SourceKind, runtime::RuntimeBuilder
 };
 
 use super::{
@@ -37,7 +35,7 @@ enum LogViewerAction {
 impl LogViewerAction {
     fn get(elements: &mut Elements<'_, '_>, pos: Pos) -> Option<Self> {
         let mut value: Option<Self> = None;
-        elements.query().at_position(pos).each(|_, attribs| {
+        elements.at_position(pos).each(|_, attribs| {
             if value.is_some() {
                 return;
             }
@@ -80,7 +78,7 @@ impl Component for LogViewer {
         mouse: MouseEvent,
         state: &mut Self::State,
         mut elements: Elements<'_, '_>,
-        _context: anathema::prelude::Context<'_>,
+        _context: anathema::prelude::Context<'_, Self::State>,
     ) {
         if !mouse.lsb_up() {
             return;
@@ -100,7 +98,7 @@ impl Component for LogViewer {
         message: Self::Message,
         state: &mut Self::State,
         _elements: Elements<'_, '_>,
-        _context: anathema::prelude::Context<'_>,
+        _context: anathema::prelude::Context<'_, Self::State>,
     ) {
         state.log_entries.push(Value::new(message.into()));
         state.length.set(state.log_entries.len());
@@ -144,7 +142,7 @@ pub fn register_logger_with_custom_name<T>(
     let component_id = builder
         .register_component(
             name,
-            "src/log_viewer.aml",
+            SourceKind::Str(include_str!("./log_viewer.aml").to_string()),
             LogViewer,
             LogViewerState::default(),
         )
